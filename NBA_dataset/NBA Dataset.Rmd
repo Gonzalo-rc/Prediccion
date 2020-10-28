@@ -1,0 +1,323 @@
+---
+title: "NBA dataset"
+author: "Gonzalo Rodríguez"
+date: "24/10/2020"
+output: html_document
+---
+
+## Objetivo del trabajo
+Responder las siguientes preguntas
+¿Hay una fuerte relación entre los datos de los jugadores y sus salarios?
+ La respuesta es absolutamente sí, pero ¿cuánto?
+
+## Descripción de las variables
+
+En primer lugar es importante conocer el dataset que tenemos en tre manos por
+ello se explicarán las variables de la base de datos:
+
+**Player**: son el nombre y apellido del jugador
+
+**Salary**: Es el salario que percibe el jugador
+
+**NBA_Country** : Es el país de procedencia del jugador
+
+**NBA_DraftNumber**:El número en el que el jugador fue drafteado
+
+**Age**: Es la edad del jugador
+
+**Tm**:Equipo para el juega
+
+**G**: Número de partidos jugados
+
+**MP**: Minutos jugados
+
+**PER**: El PER es una estadística avanzada usada en la NBA, para medir 
+el rendimiento de un jugador la media es 15
+
+**TS%**: tanto por ciento de tiros acertados
+
+**3PAr** : Tasa de Intento de 3 puntos Porcentaje 
+
+**FTr** : Tasa de intentos de lanzamiento libre Número de intentos FT por intento FG
+
+
+**ORB%**:  Porcentaje de rebote ofensivo Una estimación del porcentaje de rebotes ofensivos disponibles que un jugador agarró mientras estaba en el suelo.
+
+**DRB% **: Porcentaje de rebote defensivo Una estimación del porcentaje de rebotes defensivos disponibles que un jugador agarró mientras estaba en el suelo.
+
+**TRB%** : Porcentaje de rebote total Estimación del porcentaje de rebotes disponibles que un jugador agarró mientras estaba en el suelo.
+
+**AST**:Porcentaje de asistencia. Estimación del porcentaje de canastas de campo de un compañero de equipo que un jugador asistió mientras estaba en la pista.
+
+**STL%**:Porcentaje de robo. 
+Una estimación del porcentaje de posesiones del oponente que terminan con un robo por parte del jugador mientras estaba en la pista
+
+**BLK**:Porcentaje de tapón. 
+
+Una estimación del porcentaje de intentos de canasta  de dos puntos del oponente bloqueados por el jugador mientras estaba en la pista.
+
+**TOV%**: Porcentaje de pérdidas por cada 100 posesiones.
+
+**USG**: Porcentaje de uso. Una estimación del porcentaje de jugadas en equipo utilizadas por un jugador mientras estaba en el suelo.
+
+**OWS**: Acciones de Ganancias Ofensivas Una estimación del número de ganancias aportadas por un jugador debido a su ataque.
+
+**DWS**:Acciones de victoria defensiva. Estimación del número de victorias aportadas por un jugador debido a su defensa.
+
+**WS**:Acciones ganadoras Una estimación del número de ganancias aportadas por un jugador.
+
+**WS/48**: Acciones de victoria por 48 minutos. Una estimación del número de victorias aportadas por un jugador por 48 minutos (el promedio de la liga es aproximadamente .100)
+
+**OBPM**:Cuadro ofensivo más/menos. Un cálculo de los puntos ofensivos por cada 100 posesiones que un jugador aportó por encima del promedio de la liga, traducido a un equipo promedio.
+
+**DBPM**: Caja defensiva más/menos.  Una estimación de la puntuación de caja de los puntos defensivos por cada 100 posesiones que un jugador aportó por encima del promedio de un jugador de la liga, traducido a un equipo promedio.
+
+**BPM**:Caja Más/Menos Una estimación de la puntuación de caja de los puntos por cada 100 posesiones que un jugador aportó por encima del promedio de un jugador de la liga, traducido a un equipo promedio.
+
+**VORP**: Valor sobre el jugador de reemplazo Una estimación de la puntuación de caja de los puntos por cada 100 posesiones del equipo que un jugador contribuyó por encima del nivel de reemplazo (-2.0), traducido a un equipo promedio y prorrateado a una temporada de 82 juegos.
+
+
+## Cargamos la tabla y las librerías de necesarias.
+```{r tidy=TRUE,message=FALSE, warning=FALSE, include=FALSE}
+library(dplyr)
+library(readr)
+library(gvlma)
+library(MASS)
+library(car)
+NBA_dataset <- read_csv('nba.csv')
+attach(NBA_dataset)
+head(NBA_dataset)
+names(NBA_dataset)
+
+```
+* Procesamiento de los datos
+
+
+Miramos los valores únicos de cada fila
+```{r echo=FALSE}
+distinct(NBA_dataset)
+```
+
+Miramos los únicos de columna player, para ver como se estructura.
+
+```{r echo=FALSE}
+distinct(NBA_dataset,NBA_dataset$Player)
+```
+
++ Contamos el número de jugadores duplicados que tenemos en nuestro conjunto de datos
+
+```{r echo=FALSE }
+duplicated(NBA_dataset)
+nrow(NBA_dataset[duplicated(NBA_dataset$Player),])
+NBA_dataset<- NBA_dataset[!duplicated(NBA_dataset$Player),]
+```
+Al hacer un conteo de números de jugadores repetidos y observamos que hay 2 repetidos.
+
+
++ Se eliminan y se guardan los datos.
+```{r echo=FALSE}
+distinct(NBA_dataset)
+nrow(NBA_dataset[duplicated(NBA_dataset$Player),])
+```
+Contamos de nuevo y comprobamos que ahora no hay duplicados.
+
++ Antes de realizar el modelo lineal, es necesario cambiar el nombre a alguna de las columnas de nuestro conjunto de datos. 
+
+_A continuación se muestra el nombre de las columnas_.
+
+```{r echo=FALSE}
+NBA_dataset <- rename_with(NBA_dataset,~ sub("%", "_", .x))
+NBA_dataset <- rename_with(NBA_dataset,~ sub("3", "three", .x))
+NBA_dataset <- rename_with(NBA_dataset,~ sub("/", "_", .x))
+colnames(NBA_dataset)
+```
+Realizamos la regresión lineal de las variables y observamos cuales son las significativas
+
+```{r echo=FALSE}
+regresion <- lm(formula = Salary ~   Age + PER+ ORB_+STL_+ OWS + OBPM + TS_ + DRB_+ BLK_+ DWS + DBPM+ G + threePAr +TRB_+ TOV_ + WS + BPM + NBA_DraftNumber + MP + FTr + AST_ + USG_ + WS_48 + VORP, data = NBA_dataset)
+summary(regresion)
+
+```
+Vemos que hay _cuatro variables_ significativas,la *edad*, el *número del draft*, el *número de partidos jugados* y los *minutos por partido jugados*.
+
++ Validación Global del modelo
+
+
+```{r echo=FALSE}
+gvmodel <- gvlma(regresion)
+summary(gvmodel) 
+```
+Se observa que únicamente solo se cumple la _Heterostacidad_, no obstante esto no influye en nuestro modelo predictivo
+
+
++ Modelo AIC 
+
+Que nos da la combinación óptima de variables predictoras óptimas, la cual es la que *menor AIC* tiene.
+
+```{r echo=FALSE}
+stepAIC(regresion,direction="both") 
+```
+La combinación de variables que tienen un AIC=14863.49 son el número óptimo de variables con el que haremos nuestro modelo final.
+
+# Modelo Lineal con las variables.
+```{r echo=FALSE}
+regresion2 <- lm(formula = Salary ~ Age + PER + ORB_ + OBPM + G + threePAr + 
+    TRB_ + WS + NBA_DraftNumber + MP + USG_, data = NBA_dataset)
+summary(regresion2) 
+```
+# Validación Global del modelo óptimo
+
+```{r echo=FALSE}
+gvmodel2 <- gvlma(regresion2)
+summary(gvmodel2) 
+
+```
+Observamos que no se cumple ninguna de las suposiciones, excepto la de Heteroce
+
+# Comprobación gráfica de las suposiciones
+
+
+* Primero la normalidad
+```{r }
+qqPlot(regresion2, labels=row.names(NBA_dataset), id.method="identify",
+       simulate=TRUE, main="Q-Q Plot") ## Una forma de ver de manera gráfica que no se cumple la normalidad con Q-Q plot
+```
+```{r echo=FALSE}
+residplot <- function(fit, nbreaks=10) {
+  z <- rstudent(fit)
+  hist(z, breaks=nbreaks, freq=FALSE,
+       xlab="Studentized Residual",
+       main="Distribution of Errors")
+  rug(jitter(z), col="brown")
+  curve(dnorm(x, mean=mean(z), sd=sd(z)),
+        add=TRUE, col="blue", lwd=2)
+  lines(density(z)$x, density(z)$y,
+        col="red", lwd=2, lty=2)
+  legend("topright",
+         legend = c( "Normal Curve", "Kernel Density Curve"),
+         lty=1:2, col=c("blue","red"), cex=.7)
+}
+
+residplot(regresion2)
+```
+
+ Observamos que los valores se sitúan en torno a la media y que tenemos valores atípicos, adicionalmente, se observa de una forma clara que nuestro conjunto de datos no sigue una distribución normal.
+
++ Para el caso de la linealidad
+
+```{r echo=FALSE}
+crPlots(regresion2) 
+```
+
+Observamos que no hay linealidad, puesto que la mayoría de las observaciones, no se sitúan en torno a las recta.
+
+* Para la homocestacidad
+```{r echo=FALSE}
+ncvTest(regresion2) 
+```
+ Con que p-valor es menor a 0.05 rechazamos la hipótesis de homocedasticidad.
+
+```{r echo=FALSE}
+spreadLevelPlot(regresion2) 
+```
+
+ Comprobamos  gráficamente que no la hay.
+
++ Vamos a observar si hay problemas de multcolinealidad
+
+```{r echo=FALSE}
+sqrt(vif(regresion)) > 2 
+```
+ Observamos que hay problemas de multicolinealidad, porque hay varios variables en donde **el vif es mayor que 2**.
+
++ Miramos gráficamente los valores atípicos.
+```{r echo=FALSE}
+outlierTest(regresion2)
+```
+
+Únicamente se contrastan el mayor de los residuos, observamos que se rechaza la hipótesis de que hayan valores atípicos.
+
++ Gráfico de influencias
+
+Para observar los *puntos influyentes* y *los valores atípicos*. _El tamaño de los círculos nos indica cuán influyentes son nuestros puntos._
+
+
+```{r warning=FALSE, echo=FALSE}
+
+influencePlot(regresion2, id.method="identify", main="Influence Plot", 
+              sub="Circle size is proportial to Cook's Distance" ) 
+```
+
+El 143 a priori es una observación influyente.
+
+
+# Importancia relativa de las variables
+
+_Para conocer los pesos de cada uno de las variables en el modelo_
+
+```{r relative_weights,echo=FALSE}
+
+# Definimos la funcion
+relweights <- function(fit,...){ 
+  R <- cor(fit$model) 
+  nvar <- ncol(R)
+  rxx <- R[2:nvar, 2:nvar] 
+  rxy <- R[2:nvar, 1] 
+  svd <- eigen(rxx) 
+  evec <- svd$vectors 
+  ev <- svd$values
+  delta <- diag(sqrt(ev))
+  lambda <- evec %*% delta %*% t(evec)
+  lambdasq <- lambda ^ 2 
+  beta <- solve(lambda) %*% rxy 
+  rsquare <- colSums(beta ^ 2) 
+  rawwgt <- lambdasq %*% beta ^ 2 
+  import <- (rawwgt / rsquare) * 100 
+  import <- as.data.frame(import)
+  row.names(import) <- names(fit$model[2:nvar])
+  names(import) <- "Weights"
+  import <- import[order(import),1, drop = FALSE]
+  dotchart(import$Weights, labels = row.names(import), xlab = "% of R-Square", pch = 19, 
+           main = "Relative Importance of Predictor ariables", 
+           sub = paste("Total R-Square=", round(rsquare, digits = 3)),
+           ...)
+return(import)
+}
+
+# Aplicamos la funcion
+relweights(regresion2, col = "green")
+```
+Observamos que las variables que más peso tienen son la WS, los minutos jugados y la edad del jugador.
+
+
+# Hacemos el modelo de predicción
+
++ Realizamos una muestra de n = 10  sobre la base de datos
+
+_Observamos el salario de cada jugador que nos ayudará  a comparar los valores que nos salen en nuestra predicción._
+
+```{r echo=FALSE}
+set.seed(1234)
+
+nrow(NBA_dataset)
+n<- 10 
+
+#Elegimos el tamaño muestral y luego los seleccionamos.
+ind <- sample(1:nrow(NBA_dataset),n, replace=FALSE)
+nbamuestra<-NBA_dataset[ind,]
+nbamuestra
+
+```
++ Hacemos la predicción con tamaño muestral de 10 individuos.
+
+
+```{r echo=FALSE}
+prediccion<-predict(regresion2,newdata=nbamuestra)
+prediccion
+```
+Tenemos predicho pues el salario para cada uno de estos jugadores. Con algunos casos, se observa que el salario más o menos se ajusta al salario propuesto por la base de datos, mientras que, en otros muchos casos, vemos como según nuestro modelo de predicción el jugador en cuestión se encuentra infravalorado y debería de cobrar más.
+
+
+
+
+
