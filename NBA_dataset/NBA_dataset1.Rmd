@@ -1,8 +1,11 @@
 ---
-title: "NBA dataset"
-author: "Gonzalo Rodríguez"
-date: "24/10/2020"
-output: html_document
+title: "NBA_dataset"
+author: "Gonzalo Rodriguez"
+date: "`28/10/2020`"
+output:
+  prettydoc::html_pretty:
+    theme: architect
+    highlight: github
 ---
 
 ## Objetivo del trabajo
