@@ -1,0 +1,140 @@
+---
+title: "Your Document Title"
+author: "Document Author"
+date: "`r Sys.Date()`"
+output:
+  prettydoc::html_pretty:
+    theme: architect
+    highlight: github
+---
+## Cargamos datos
+```{r warning=FALSE,message=FALSE}
+library(here) # Comentar
+library(tidyverse)
+
+library(magrittr) # Pipe operators
+library(corrplot) # Correlations
+library(ggcorrplot)  # Correlations
+library(PerformanceAnalytics) # Correlations
+library(leaps) # Model selection
+library(readr)
+library(skimr)
+library(mgcv)
+library(janitor) 
+library(rsample)   
+library(glmnet)   
+library(broom) 
+library(mgcv) # Estimaciones GAM
+library(imputeTS) 
+
+pisas<-read.csv("pisasci2006.csv")
+```
+
+#Seleccionamos  las columnas por encima
+
+```{r}
+pisas %<>%
+  select(Country, Overall, Interest, Support, Income, Health, Edu, HDI)
+```
+
+
+## Limpiamos los datos
+
++ Cambiar nombres
+
+```{r}
+pisas %<>% clean_names()
+colnames(pisas)
+```
+
++ Ponemos la  media en los NaN para evitar eliminar los datos y distorsionar la muestra
+
+```{r}
+pisas <- na_mean(pisas)
+```
+
++Data Wrangling
+
+```{r}
+# delete duplicate
+# Remove duplicate rows of the dataframe
+pisas %<>% distinct(country,.keep_all= TRUE)
+# Summarise
+skim(pisas)
+```
+
+## Graficamos 
+```{r}
+par(mfrow=c(2,3))
+plot(pisas$overall,pisas$explain)
+plot(pisas$overall,pisas$issues)
+plot(pisas$overall,pisas$evidence)
+plot(pisas$overall,pisas$interest)
+plot(pisas$overall,pisas$support)
+plot(pisas$overall,pisas$income)
+plot(pisas$overall,pisas$Health)
+plot(pisas$overall,pisas$edu)
+plot(pisas$overall,pisas$hdi)
+```
+Explain, issues y evidence aparentemente son lineales.
+
+#Observar los grados de libertad 
+
+
+```{r}
+# SPLINES INTEREST
+spl_interest <- smooth.spline(x = pisas$interest, y = pisas$overall, cv = TRUE)
+spl_interest$df
+# SPLINES SUPPORT
+spl_support <- smooth.spline(x = pisas$support, y = pisas$overall, cv = TRUE)
+spl_support$df
+# SPLINES INCOME
+spl_income <- smooth.spline(x = pisas$income, y = pisas$overall, cv = TRUE)
+spl_income$df
+# SPLINES HEALTH
+spl_health <- smooth.spline(x = pisas$health, y = pisas$overall, cv = TRUE)
+spl_health$df
+# SPLINES EDU
+spl_edu <- smooth.spline(x = pisas$edu, y = pisas$overall, cv = TRUE)
+spl_edu$df
+# SPLINES HDI
+spl_hdi <- smooth.spline(x = pisas$hdi, y = pisas$overall, cv = TRUE)
+spl_hdi$df
+```
+Una vez tenemos los resultados de los grados de libertad ideales para cada variable por CV
+
+
+# Hacemos varios modelos y observamos cual es el que se ajusta 
+
++ Modelo con seis splines
+
+```{r}
+model_gam_1 <- gam(overall ~ s(interest) + s(support) + s(income) + s(health) + s(edu) + s(hdi), data = pisas)
+par(mfrow = c(2, 3))
+plot(model_gam_1, se = TRUE, col = 'orange', lwd = 2)
+```
+
+
+
+* El segundo modelo  con 3 variables lineales y 3 splines
+
+```{r}
+model_gam_2 <- gam(overall ~ interest + support + s(income) + health + s(edu) + s(hdi), data = pisas)
+par(mfrow = c(1, 3))
+plot(model_gam_2, se = TRUE, col = 'orange', lwd = 2)
+```
+
+
+#Miramos cual de los modelos es mejor
+
+```{r}
+anova(model_gam_1,model_gam_2,test='F')
+```
+Se observa como el modelo en dos con las partes lineales tiene una mayor significancia, que el de que todas las variables son ajustadas por splines, como era de esperar.
+
++Miramos las características del modelo
+```{r}
+summary(model_gam_2)
+```
+Para mirar  si las partes  lineales, es el anova parametric, como se obsrva en el caso del interes si que tiene una cierta significancia,  en el caso de las partes no lienales  los spines son significativos, en income y eduación, en el caso de hdi parace perder cierta significancia respecto a los dos primeros .
+
