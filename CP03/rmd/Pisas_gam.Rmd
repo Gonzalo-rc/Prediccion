@@ -30,7 +30,7 @@ library(imputeTS)
 pisas<-read.csv("pisasci2006.csv")
 ```
 
-#Seleccionamos  las columnas por encima
+# Seleccionamos  las columnas por encima
 
 ```{r}
 pisas %<>%
@@ -53,7 +53,7 @@ colnames(pisas)
 pisas <- na_mean(pisas)
 ```
 
-+Data Wrangling
++ Data Wrangling
 
 ```{r}
 # delete duplicate
@@ -78,7 +78,7 @@ plot(pisas$overall,pisas$hdi)
 ```
 Explain, issues y evidence aparentemente son lineales.
 
-#Observar los grados de libertad 
+# Observar los grados de libertad 
 
 
 ```{r}
@@ -125,16 +125,16 @@ plot(model_gam_2, se = TRUE, col = 'orange', lwd = 2)
 ```
 
 
-#Miramos cual de los modelos es mejor
+# Miramos cual de los modelos es mejor
 
 ```{r}
 anova(model_gam_1,model_gam_2,test='F')
 ```
 Se observa como el modelo en dos con las partes lineales tiene una mayor significancia, que el de que todas las variables son ajustadas por splines, como era de esperar.
 
-+Miramos las características del modelo
++ Miramos las características del modelo
 ```{r}
 summary(model_gam_2)
 ```
-Para mirar  si las partes  lineales, es el anova parametric, como se obsrva en el caso del interes si que tiene una cierta significancia,  en el caso de las partes no lienales  los spines son significativos, en income y eduación, en el caso de hdi parace perder cierta significancia respecto a los dos primeros .
+Para mirar  si las partes  lineales, es el anova parametric, como se observa en el caso del interes si que tiene una cierta significancia,  en el caso de las partes no lienales  los spines son significativos, en income y eduación, en el caso de hdi parace perder cierta significancia respecto a los dos primeros .
 
