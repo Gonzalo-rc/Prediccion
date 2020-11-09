@@ -130,7 +130,9 @@ raw_data %<>% drop_na() #buscamos el de menor std respecto a su media
 log_data <- raw_data %>% mutate(salary=log(salary))
 
 ```
+
 # Hacemos división del dataset
+
 ```{r}
 set.seed(03112020)
 
@@ -154,11 +156,29 @@ nba_test_y <- log_data$salary
 
 
 # Elastic net
+
+La red elástica es otra penalización que incorpora la selección variable del lazo y la contracción de predictores correlacionados como la regresión de ridge.
+
+```{r}
+lasso    <- glmnet(nba_tr_x, nba_tr_y, alpha = 1.0) 
+elastic1 <- glmnet(nba_tr_x, nba_tr_y, alpha = 0.25) 
+elastic2 <- glmnet(nba_tr_x, nba_tr_y, alpha = 0.75) 
+ridge    <- glmnet(nba_tr_x, nba_tr_y, alpha = 0.0)
+
+par(mfrow = c(2, 2), mar = c(6, 4, 6, 2) + 0.1)
+plot(lasso, xvar = "lambda", main = "Lasso (Alpha = 1)\n\n\n")
+plot(elastic1, xvar = "lambda", main = "Elastic Net (Alpha = .25)\n\n\n")
+plot(elastic2, xvar = "lambda", main = "Elastic Net (Alpha = .75)\n\n\n")
+plot(ridge, xvar = "lambda", main = "Ridge (Alpha = 0)\n\n\n")
+```
+
+
 ```{r}
 # Mantenemos los folds en la muestra
+
 fold_id <- sample(1:10, size = length(nba_tr_y), replace=TRUE)
 
-# Miramos entre los grupos de alphas.
+# Miramos entre los grupos de alphas. De 0 a 1 cada 0.05
 
 tuning_grid <- tibble::tibble(
   alpha      = seq(0, 1, by = 0.05),
@@ -169,9 +189,14 @@ tuning_grid <- tibble::tibble(
 )
 tuning_grid
 
+
 ```
 
+
+
 + Hacemos crossvalidation para cada alpha
+
+
 ```{r}
 for(i in seq_along(tuning_grid$alpha)) {
   
@@ -185,7 +210,16 @@ for(i in seq_along(tuning_grid$alpha)) {
   tuning_grid$lambda_1se[i] <- fit$lambda.1se
 }
 tuning_grid
+
+tuning_grid %>%
+  mutate(se = mse_1se - mse_min) %>%
+  ggplot(aes(alpha, mse_min)) +
+  geom_line(size = 2) +
+  geom_ribbon(aes(ymax = mse_min + se, ymin = mse_min - se), alpha = .25) +
+  ggtitle("MSE ± one standard error")
 ```
+Todos los errores están dentro del intervalo de confianza, por lo que nos interesaría el alfa que  menor error tenga, en este caso se observa en el caso de alfa 1 que corresponde a lasso.
+
 
 + El que menor que menor lambda nos da es el alpha correspondiente a 1 que corresponde a lasso.
 
@@ -198,6 +232,7 @@ min(cv_lasso$cvm)
 
 
 ### Prediccion y calculo del error con el dataset de test
+
 ```{r}
 
 
@@ -205,5 +240,5 @@ pred <- predict(cv_lasso, s = cv_lasso$lambda.min, nba_test_x)
 mean((nba_test_y - pred)^2) #el error de la prediccion es menor que 
 
 ```
-
+Con que el error medio de predicción es menor en el set de test que en el de training, la capacidad predictiva es aceptable y por tanto la estimación es mejor. 
 
