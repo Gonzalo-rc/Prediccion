@@ -59,7 +59,7 @@ Ventas=to.quarterly(Ventas)
 ```{r}
 #Formato zoo
 zVentas=as.zoo(Ventas$Ventas.Close)
-zVentas<- log(zVentas)
+
 #Graficamos
 autoplot(zVentas)+ggtitle("Ventas Trimestrales Apple")+xlab("Trimestres")+ylab("Ventas")
 ```
@@ -191,13 +191,13 @@ summary(fventas.arima)
 ```
 
 
-Elegimos el modelo ARIMA por tener un mejor valores de error MAPE, de BIC y de AIC que el modelo arima a la hora de predecir.
+Elegimos el modelo ARIMA por tener un mejor valores de errores en general , además de tener mejores valores de BIC y de AIC que el modelo ETS a la hora de predecir.
 
 
 ## Conclusiones
 
 Observamos como el modelo que mejor nos predice y finalmente el que escogemos es el modelo ARIMA, centrándonos en el gráfico de la predicción,  se espera que las ventas disminuyan, habiendo analizado las últimas noticias de la compañía, esto se puede deber a que si observamos hay un patrón que se repite que es que las ventas disminuyen a partir del primer trimestre y posteriormente vuelven a subir.
 
-![](https://images.macrumors.com/t/sn6T2h7r0yOZvzOszkABmQ5Teyo=/1200x1200/smart/article-new/2017/11/Screen-Shot-2017-11-02-at-4.37.07-PM.jpg)
+![](https://images.macrumors.com/t/zeDOz0coocEZkkrsqDX6PRilYhg=/1600x1200/smart/article-new/2019/10/Screen-Shot-2019-10-30-at-4.37.08-PM.jpg)
 En este gráfico observamos los ingresos por dispositivo para la compañía Apple, donde merece la pena destcar con gran parte de los beneficios obtenidos por este gigante,provienen del iPhone , el cual aumenta sus beneficios conforme pasan los años,no obstante también se observa que a medida que transcurre el año se llega a un pico y después se disminuye, esto se puede deber a la salida al mercado de los iPhones y iPads, que en el primer caso es sobre septiembre y en el segundo en marzo, donde los ingresos aumentan considerablemente a la salida  y  posteriormente caen.
 
