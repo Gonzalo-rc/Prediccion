@@ -122,7 +122,7 @@ ggtsdisplay(fventas.ets$residuals)
 
 + Graficamos la predicción
 
-```{r echo=FALSE}
+```{r echo=FALSE,warning=FALSE}
 #Gráfico con la predicción
 plot(fventas.ets)
 lines(window(zVentas),type="o")
@@ -179,6 +179,8 @@ fventas.arima=forecast(fit1)
 
 ggplot(df_new)+geom_point(aes(x=time,y=value))+geom_line(aes(x=time,y=value))+ geom_forecast(fventas.arima,alpha=0.4)+ggtitle("ARIMA: Predicción de los ingresos de Apple")
 ```
+En este gráfico observamos que la línea de color negro es el valor real, mientras que la azul es la predicción , con los intervalos de confianza también en azul. De modo que nos hacemos una idea de la predicción de nuestro modelo. 
+
 
 + Aqui mostramos un resumen de las predicciones del mejor modelo ARIMA.
 
@@ -193,5 +195,5 @@ Elegimos el modelo ARIMA porque tiene un menor MAPE respecto el ETS (8.28 respec
 Observamos como el modelo que mejor nos predice y finalmente el que escogemos es el modelo ARIMA, centrándonos en el gráfico de la predicción,  se espera que las ventas disminuyan, habiendo analizado las últimas noticias de la compañía, esto se puede deber a que si observamos hay un patrón que se repite que es que las ventas disminuyen a partir del primer trimestre y posteriormente vuelven a subir.
 
 ![](https://images.macrumors.com/t/yBfxnPiu70RhJAPuY2CPI1kftH8=/1600x0/article-new/2017/08/Screen-Shot-2017-08-01-at-4.36.03-PM.jpg)
-En este gráfico observamos los ingresos por dispositivo para la compañía Apple, donde merece la pena destcar con gran parte de los beneficios obtenidos por este gigante,provienen del iPhone , el cual aumenta sus beneficios conforme pasan los años,no obstante también se observa que a medida que transcurre el año se llega a un pico y después se disminuye, esto se puede deber a la salida al mercado de los iPhones y iPads, que en el primer caso es sobre septiembre y en el segundo en marzo, donde los ingresos aumentan a la salida  y se mantienen, y  posteriormente caen.
+En este gráfico observamos los ingresos por dispositivo para la compañía Apple, donde merece la pena destcar con gran parte de los beneficios obtenidos por este gigante,provienen del iPhone , el cual aumenta sus beneficios conforme pasan los años,no obstante también se observa que a medida que transcurre el año se llega a un pico y después se disminuye, esto se puede deber a la salida al mercado de los iPhones y iPads, que en el primer caso es sobre septiembre y en el segundo en marzo, donde los ingresos aumentan considerablemente a la salida  y  posteriormente caen.
 
