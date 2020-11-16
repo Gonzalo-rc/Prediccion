@@ -59,7 +59,7 @@ Ventas=to.quarterly(Ventas)
 ```{r}
 #Formato zoo
 zVentas=as.zoo(Ventas$Ventas.Close)
-
+zVentas<-log(zVentas)
 #Graficamos
 autoplot(zVentas)+ggtitle("Ventas Trimestrales Apple")+xlab("Trimestres")+ylab("Ventas")
 ```
