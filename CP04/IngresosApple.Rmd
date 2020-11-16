@@ -73,7 +73,7 @@ tVentas = ts(coredata(zVentas), start = c(2008, 2), frequency = 4)
 #Graficamos por trimestres.
 ggfreqplot(tVentas,freq=4,nrow=1,facet.labeller=c("1T","2T","3T","4T"))+ggtitle("Ingresos Trimestrales")
 ```
-Donde el T1 corresponde al primer trimestre de todos los años de la muestra, T2 al segundo trimestre y viceversa.
+Donde el T1 corresponde al primer trimestre de todos los años de la muestra, T2 al segundo trimestre y viceversa. Como se observa en el cuarto cuatrimestre,  la media de ingresos es mayor debido al lanzamiento de productos.
 
 # Creamos la submuestra 
 
@@ -160,6 +160,7 @@ summary(fit1)
 ## Graficamos los residuos.
 
 Nos interesa que los errores sean ruido blanco, como se observa gráficamente.
+
 ```{r echo=FALSE}
 ggtsdisplay(fit1$residuals)
 ```
