@@ -188,7 +188,7 @@ En este gráfico observamos que la línea de color negro es el valor real, mient
 ```{r echo= FALSE}
 summary(fventas.arima)
 ```
-Elegimos el modelo ARIMA porque tiene un menor MAPE respecto el ETS (8.28 respecto a 8.67), por lo que elegimos este modelo.
+Elegimos el modelo ARIMA porque tiene un menor AIC respecto el ETS , por lo que elegimos este modelo.
 
 
 ## Conclusiones
