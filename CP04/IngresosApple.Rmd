@@ -1,0 +1,196 @@
+---
+title: "CP04- Ventas de Apple"
+author: "Gonzalo Rodríguez Cañada"
+date: "`r Sys.Date()`"
+output:
+  prettydoc::html_pretty:
+    theme: architect
+    highlight: github
+---
+# Objetivo
+
+El objetivo principal es el de usar las series temporales de las ventas de Apple,  .Se ha de  elegir el modelo ETS y el modelo ARIMA que mejor predice las ventas, habiendo dejado fuera de la estimación los trimestres del 2017. Y posteriormente, con el mejor modelo predeciremos.
+
+# Cargamos las librerias y los datos
+```{r warning=FALSE,message=FALSE}
+library(dplyr) #To efficiently manipulate dataframes.
+library(xts) #To work with extensible Time Series
+require(ggplot2) #To build better graphs
+library(forecast) #To use Holt (among others) models
+library(urca) 
+library(ggfortify)
+```
+
+# Análisis del conjunto de datos
+
+```{r results='hide'}
+apple <- read.csv("IngresosApple.csv", sep=";")
+
+skimr::skim(apple)
+
+```
+Observamos que no hay NaN, ni valores repetidos.
+
+
+# Hacemos una fila con la fecha de los trimestres
+
+Con el objetivo de ordenar los datos y poder transformarlos a formato xts se crean una columna con las fechas de los trimestres.
+
+```{r results='hide'}
+fechas <- seq(as.Date("2008-04-01"), as.Date("2017-09-30"), by = "quarter")
+fechas
+apple <- mutate(apple, fecha=fechas)
+str(apple)
+```
+# Lo pasamos a formato xts
+
+```{r}
+#Formato xts ordenado por las fechas
+
+Ventas=xts(apple$Ingresos, order.by = as.Date(apple$fecha,"%Y/%m/%d"),frequency=4)
+
+#Generamos los datos de manera trimestral
+
+Ventas=to.quarterly(Ventas)
+```
+
+# Formato zoo y graficamos
+
+```{r}
+#Formato zoo
+zVentas=as.zoo(Ventas$Ventas.Close)
+#Graficamos
+autoplot(zVentas)+ggtitle("Ventas Trimestrales Apple")+xlab("Trimestres")+ylab("Ventas")
+```
+Observamos que no es estacionario ni en media ni en varianza.
+
++ Representamos estos mismos datos pero de manera trimestral
+
+```{r echo=FALSE, warning=FALSE}
+#Q2 del 2008 es el primer dato del que tenemos disponibilidad
+tVentas = ts(coredata(zVentas), start = c(2008, 2), frequency = 4)
+
+#Graficamos por trimestres.
+ggfreqplot(tVentas,freq=4,nrow=1,facet.labeller=c("1T","2T","3T","4T"))+ggtitle("Ingresos Trimestrales")
+```
+Donde el T1 corresponde al primer trimestre de todos los años de la muestra, T2 al segundo trimestre y viceversa.
+
+# Creamos la submuestra 
+
+Quitamos los cuatrimestres correspondientes a 2017.
+
+```{r echo=FALSE}
+#Dejamos fuera los 3 últimos trimestres de 2017
+cOmit=3
+
+#Objetivo con la longitud de los datos
+nObs=length(zVentas)
+
+#Sub muestra
+#oVentas=zVentas[1:(nObs-cOmit),]
+oVentas <- window(zVentas,start=index(zVentas[1]),end=index(zVentas[nObs-cOmit]))
+
+```
+
+# Modelo ETS
+
++ Los modelos ETS son una familia de modelos de series temporales con un modelo de espacio de estado subyacente que consiste en un componente de nivel, un componente de tendencia (T), un componente estacional (S) y un término de error (E).
+
+```{r echo= FALSE}
+etsfit<-ets(oVentas)
+#Modelo de predicción
+fventas.ets=forecast(etsfit)
+#Resultados
+etsfit$method
+summary(fventas.ets)
+```
+
+Observamos que el mejor modelo es en donde el error es multiplicativo, estacionalidad aditiva, y tendencia multiplicativa. En esta table obtenemos los valores de los ingresos predichos por nuestro modelo ETS (M,A,M) con los respectivos intervalos de confianza al 80% y 95%.
+
+Así como el error medio, el error cuadrático medio y el MAPE que nos da una información similar a estos dos últimos.
+
+## Graficamos los errores
+
+Nos interesa que se asemejen a ruido blanco, como así podemos comprobarlo gráficamente, lo cual nos indica que vamos por buen camino y que nuestro modelo es correcto.
+
+```{r echo= FALSE}
+ggtsdisplay(fventas.ets$residuals)
+```
+
+
+
+
++ Graficamos la predicción
+
+```{r echo=FALSE}
+#Gráfico con la predicción
+plot(fventas.ets)
+lines(window(zVentas),type="o")
+```
+En este gráfico observamos que la línea de color negro es el valor real, mientras que la azul es la predicción , con los intervalos de confianza también en azul. De modo que nos hacemos una idea de la predicción de nuestro modelo. 
+
+# Modelo ARIMA
+
+Quitamos los cuatrimestres correspondientes a 2017, como hicimos anteiormente.
+
+```{r echo=FALSE}
+#Omitimos los últimos tres trimestres
+cOmit=3
+
+#Objeto con la longitud del dataset
+nObs=length(zVentas)
+
+#Sub-muestra
+oVentas <- window(zVentas,start=index(zVentas[1]),end=index(zVentas[nObs-cOmit]))
+
+#Datos para hacer la predicción
+
+pVentas <- window(zVentas,start=index(zVentas[nObs-cOmit+1]),end=index(zVentas[nObs]))
+```
+
+Especificamos el modelo Arima, indicando que queremos que se trabaje con el valor de lambda igual a 0, que nos indica que se trabaja con el logartimo. Posteriormente, mostramos un resumen del mejor modelo Arima.
+
+```{r echo=FALSE}
+fit1=auto.arima(oVentas,lambda=0)
+summary(fit1)
+```
+
+
+
+## Graficamos los residuos.
+
+Nos interesa que los errores sean ruido blanco, como se observa gráficamente.
+```{r echo=FALSE}
+ggtsdisplay(fit1$residuals)
+```
+
+Creamos un data frame de los valores con dos columnas, en donde time es la correspondiente a los trimestres y value son los ingresos.
+
+```{r echo=FALSE}
+df_new <- data.frame(value = as.vector(zVentas),
+                     time = time(zVentas))
+```
+
+## Hacemos la predicción y graficamos
+
+
+```{r echo=FALSE}
+fventas.arima=forecast(fit1)
+
+ggplot(df_new)+geom_point(aes(x=time,y=value))+geom_line(aes(x=time,y=value))+ geom_forecast(fventas.arima,alpha=0.4)+ggtitle("ARIMA: Predicción de los ingresos de Apple")
+```
+
++ Aqui mostramos un resumen de las predicciones del mejor modelo ARIMA.
+
+```{r echo= FALSE}
+summary(fventas.arima)
+```
+Elegimos el modelo ARIMA porque tiene un menor MAPE respecto el ETS (8.28 respecto a 8.67), por lo que elegimos este modelo.
+
+
+## Conclusiones
+
+Observamos como el modelo que mejor nos predice y finalmente el que escogemos es el modelo ARIMA, centrándonos en el gráfico de la predicción,  se espera que las ventas disminuyan, habiendo analizado las últimas noticias de la compañía, esto se puede deber a que si observamos hay un patrón que se repite que es que las ventas disminuyen a partir del primer trimestre y posteriormente vuelven a subir.
+
+
+
