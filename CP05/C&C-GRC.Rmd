@@ -1,0 +1,271 @@
+---
+title: "CP05: Colgate Vs Crest"
+author: "Gonzalo Rodríguez"
+date: "`r Sys.Date()`"
+output:
+  prettydoc::html_pretty:
+    theme: architect
+    highlight: github
+---
+
+# Objetivo
+
+El objetivo es predecir las 16 semanas del año 1963, para las dos cuotas de mercado, por lo que se dejará fuera de la muestra este periodo muestral.
+
+El análisis debe incluir para las dos series la estimación de un modelo ARIMA, la detección de atípicos/outlier y un modelo de interveción. Por último se debe realizar un modelo de función de tranferencia entre las dos cuotas.
+
+## Carga de datos y librerías
+
+```{r warning=FALSE, message=FALSE,echo=FALSE}
+library(openxlsx)
+library(skimr)
+library(fpp2)
+library(ggplot2)
+library(zoo)#Zoo format
+library(ggfortify)
+library(forecast)
+library(tsoutliers)#outliers
+library(TSA)# "Time Series Analysis
+library(xts)#Timeseries
+library(readr)
+library(tidyverse)
+library(dplyr)
+library(MASS)
+```
+
+
+
+```{r echo=FALSE}
+df<-read.xlsx('data.xlsx')
+#Hacer 
+df$Fecha <- as.Date(paste(df$Year,df$Week,1, sep = '-'), "%Y-%U-%u")
+```
+
+## Breve EDA
+```{r}
+skim(df)
+```
+
+El dataset contiene 120 semanas entre los años 1958-1963, de las cuales las últimas 16 semanas correspondientes a  1963 tendrán que ser predecidas. Para ello, vamos a partir las series temporales de Crest y Colgate.
+
+```{r echo=FALSE}
+#Usamos ts para hacer timeseries de colgate
+colgate<-ts(df$Colgate, start=1958,frequency = 52)
+crest <- ts(df$Crest,start=1958,frequency = 52)
+
+```
+
+# Formato zoo y graficamos
+```{r echo=FALSE}
+colgateZ <-as.zoo(colgate)
+crestZ<- as.zoo(crest)
+
+#Graficamos
+
+par(mfrow=c(1,2))
+autoplot(colgateZ)+ggtitle("Colgate")+xlab("Semanas")+ylab("Cuota en el mercado")
+autoplot(crestZ)+ggtitle("Crest")+xlab("Semanas")+ylab("Cuota en el mercado")
+par(mfrow=c(1,1))
+```
+Observamos que no es estacionario ni en media , y que en ambos casos.
+
+
+# Creamos la submuestra 
+
+Quitamos las 16 semanas correspondientes a 1963.
+
+```{r echo=FALSE}
+#Dejamos fuera los 16 últimos semanas de 1963
+cOmit=16
+
+#Objetivo con la longitud de los datos
+nObscolg=length(colgateZ)
+nObscrest=length(crestZ)
+#Sub muestra
+
+oColgate <- window(colgateZ,start=index(colgateZ[1]),end=index(colgateZ[nObscolg-cOmit]))
+oCrest <- window(crestZ,start=index(crestZ[1]),end=index(crestZ[nObscrest-cOmit]))
+
+```
+
+# Modelo ARIMA
+
+
+Los conjuntos de datos de series cronológicas pueden contener tendencias y estacionalidad, que tal vez sea necesario eliminar antes de la elaboración de modelos.
+
+Las tendencias pueden dar lugar a una media variable a lo largo del tiempo, mientras que la estacionalidad puede dar lugar a una variación cambiante a lo largo del tiempo, lo que define a una serie temporal como no estacionaria. 
+
+Los conjuntos de datos estacionarios son los que tienen una media y una varianza estables, y a su vez son mucho más fáciles de modelar. Por ello, vamos a hacer nuestras series estacionarias.
+
+```{r echo=FALSE}
+ggtsdisplay(diff(colgateZ))
+
+```
+
+```{r echo=FALSE}
+ggtsdisplay(diff(crestZ))
+```
+Especificamos el modelo Arima, indicando que queremos que se trabaje sin lambda ya que la varianza es más o menos cte, que nos indica que se trabaja con el logartimo. Posteriormente, mostramos un resumen del mejor modelo Arima.
+
+
+## Selección del lambda
+
+Para seleccionar el lambda lo miramos por el BoxCox
+
+
+
+```{r}
+fit<-auto.arima(oColgate)
+summary(fit)
+```
+El modelo ARIMA que se estima para la serie de colgate es en la parte parte regular se ha tenido que aplicar 1 diferencia para hacerlo estacionario y una media móvil de orden 1. Y como parte estacional un autoregresivo de orden 1. 
+
+```{r}
+fit1<-auto.arima(oCrest)
+summary(fit1)
+```
+
+El modelo ARIMA que se estima para la serie de Crest es en la parte parte regular se ha tenido que aplicar 1 diferencia para hacerlo estacionario y una media móvil de orden 1. Y sin estructura en la parte estacional.
+
+Si ponemos $\lambda $ es que estamos poniendo logaritmo.
+Boxcox
+
+
+## Graficamos los residuos.
+
+Nos interesa que los errores sean ruido blanco, como se observa gráficamente.
+
+```{r echo=FALSE}
+ggtsdisplay(fit$residuals)
+```
+
+```{r echo=FALSE}
+ggtsdisplay(fit1$residuals)
+```
+## Análisis de los residuos
+
+```{r echo=FALSE}
+x<- Box.test(fit$residuals, lag = 24, fitdf = 1, type = "Lj")
+
+y <- Box.test(fit1$residuals, lag = 24, fitdf = 1, type = "Lj")
+
+knitr:: kable(cbind(x$p.value, y$p.value), col.names = c('P-value Arima Crest', 'P-value Arima Colgate'))
+
+
+```
+No rechazamosla hipótesis nula, ya que el p-value es mayor a 0.05 que indica que nuestro error es ruido blanco.
+
+
+
+Creamos un data frame de los valores con dos columnas, en donde time es la correspondiente a los trimestres y value son los ingresos.
+
+
+```{r}
+#Predecimos los meses
+
+fColgate.arima<-forecast(fit,h=16)#horizonte de 16 semanas
+df_new <- data.frame(value = as.vector(colgateZ), time = time(colgateZ)) 
+ggplot(df_new)+geom_point(aes(x=time,y=value))+geom_line(aes(x=time,y=value))+ geom_forecast(fColgate.arima,alpha=0.4)+xlab("Fecha")+ylab("Colgate")+ggtitle(": Predicción Colgate") + theme_bw() 
+fColgate.arima
+```
+
+
+En este gráfico observamos que la línea de color negro es el valor real, mientras que la azul es la predicción , con los intervalos de confianza también en azul. De modo que nos hacemos una idea de la predicción de nuestro modelo. En este caso vemos como se trata de un escalón, donde se recupera la serie original.
+
+```{r echo=FALSE}
+fCrest.arima<-forecast(fit1,h=16) #horizonte de 16 semanas.
+df_new <- data.frame(value = as.vector(crestZ), time = time(crestZ)) 
+ggplot(df_new)+geom_point(aes(x=time,y=value))+geom_line(aes(x=time,y=value))+ geom_forecast(fCrest.arima,alpha=0.4)+xlab("Fecha")+ylab("Colgate")+ggtitle(": Predicción Colgate") + theme_bw() 
+fColgate.arima
+```
+En este caso ha una función escalón, que genera un impulso positivo ascendente.
+
+#Outliers
+
+Detectamos que a priori no hay errores aditivos,y si que que hay errores innovativos
+
+```{r}
+detectAO(fit)
+```
+
+```{r}
+detectAO(fit1)
+```
+
+
+
+```{r}
+detectIO(fit)
+```
+
+```{r}
+detectIO(fit1)
+```
+
+
+#Arimax
+
+```{r intevercion colgate, echo=FALSE}
+air.colg=arimax(oColgate,order=c(0,1,1),
+        seasonal=list(order=c(1,0,0),period=52),
+        xtransf=data.frame(I=1*(seq(oColgate)>=134),
+            E=1*(seq(oColgate)==102)),
+        transfer=list(c(0,0),c(1,0)),
+method='ML')#maxima verosimolitud
+
+```
+
++ Graficamos el ajuste
+
+```{r echo=FALSE}
+plot(oColgate)
+points(fitted(air.colg), col = 'coral3')
+
+air.colg$coef
+
+```
+Hacemos el modelo Arimax para crest.
+
+```{r interveción de crest}
+air.crest=arimax(oCrest,order=c(0,1,1),
+        xtransf=data.frame(E=1*(seq(oCrest)==137),
+            I=1*(seq(oCrest)>=38)),
+            xreg=data.frame(o3160=1*(seq(oCrest)==135),
+                           o3260=1*(seq(oCrest)==136),
+                           o0562=1*(seq(oCrest)==138)),
+ 
+        transfer=list(c(0,0),c(1,0)),
+method='ML')
+
+```
+
++ Ajustamos el modelo
+
+```{r}
+plot(oCrest)
+points(fitted(air.crest), col = 'coral3')
+air.crest$coef
+```
+
+# Función de transferencia
+Colgate en función de crest
+
+
+```{r}
+ftransf <- arimax(oColgate, order=c(0,1,1),                        seasonal=list(order=c(1,0,0),period=52),
+               include.mean=TRUE,
+               xtransf=oCrest,
+               transfer=list(c(0,16)),
+               method="ML")
+
+```
+
+Graficamos lo los residuos.
+
+```{r echo=FALSE}
+summary(ftransf)
+
+ggtsdisplay(ftransf$residuals)
+plot(ftransf$coef[2:17], type="h")
+```
+
