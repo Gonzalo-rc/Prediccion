@@ -1,0 +1,174 @@
+---
+title: "CP06: BMW vs Volkswagen"
+author: "Gonzalo Rodríguez Cañada"
+date: "`r Sys.Date()`"
+output:
+  prettydoc::html_pretty:
+    theme: cayman
+    highlight: github
+---
+
+# Objetivo 
+
+Generar un modelo GARCH para la serie de BMW y un modelo VAR para BMW y Volkswagen con el fin de comprobar los efectos dinámicos.
+
+
+```{r include=FALSE}
+knitr::opts_chunk$set(echo = T, warning = FALSE, message = FALSE)
+```
+
+```{r}
+library(quantmod)
+library(forecast)
+library(fGarch)
+library(ggplot2)
+library(dplyr)
+library(vars)
+```
+
++ Extraemos los datos
+
+```{r }
+getSymbols('BMW.DE', from = '2014-01-01', to = Sys.Date())
+bmw <- BMW.DE[,6]
+
+getSymbols('VOW.DE', from = '2014-01-01', to = Sys.Date())
+volks <- VOW.DE[,6]
+```
+
++ Seguidamente, graficamos la evolución diaria
+
+
+```{r }
+
+df_bmw_volks <- cbind(bmw, volks)
+
+autoplot(df_bmw_volks, facets = FALSE) +
+  ggtitle("Evolucion valor en bolsa") +
+  xlab("Año") +
+  ylab("Valor")
+```
++ Realizamos un modelo Garch con BMW
+
+Eliminamos los datos nulos
+
+```{r}
+r_bmw = dailyReturn(bmw, type='log', leading=FALSE)
+r_bmw=na.exclude(r_bmw)
+
+#Graficamos
+
+plot.zoo(cbind(bmw, r_bmw))
+plot.zoo(cbind(Ad(bmw),r_bmw,r_bmw^2), main = 'Serie, Rendimiento y Volatilidad')
+```
+Le hacemos un test de media, con el que comprobamos si posee una media 0.
+
+```{r}
+t.test(r_bmw)
+```
+No se rechaza la hipótesis, dado qe el p valor es mayor al 0.05.
+
+Lo siguiente es observar si la serie posee volatilidad.
+
+```{r}
+v_bmw <- r_bmw^2
+tsdisplay(v_bmw) 
+Box.test(v_bmw, lag=40, type="Lj")
+```
+
+Hay volatilidad, porque en principio no es ruido blanco.
+
++ Test de Lagrange
+
+
+```{r}
+
+T.Lag <- function(r,m){
+  y = (r - mean(r))^2
+  t = length(r)
+  a = y [(m +1) : t]
+  x = matrix(0, (t - m), m)
+  for (i in 1:m){
+    x[,i] = y [(m+1-i):(t-i)]
+  }
+  md = lm(a~x)
+  summary(md)
+}
+
+T.Lag(r_bmw, m = 20)
+```
+
+El garch tiene efecto, al rechazar Ho.
+
+
+ GARCH(1,1) es el modelo mas utilizado, en realidad es un ARMA(1,1) sobre la varianza de los errores.
+ 
+ 
+
+
+
+```{r}
+modelo_garch =garchFit(~1+garch(1,1), data=r_bmw, trace=F)
+summary(modelo_garch)
+```
+Con el correlograma de los residuos observamos que son ruido blanco. Mientras que con el Q-Q plot vemos que no hay normalidad, dado que los puntos no se ajustan a la recta.
+
+```{r}
+residues=residuals(modelo_garch,standardize=T)  
+residues=xts(residues, order.by=index(r_bmw)) 
+tsdisplay(residues^2) 
+Box.test(residues^2, lag=40, type="Lj")
+
+plot(modelo_garch, which = c(2,13,0))
+
+```
+
+Para obtener una varianza constante y eliminar los efectos de este modelo hacemos el GARCH (2,2)
+
+```{r}
+modelo_garch2 =garchFit(~1+garch(1,2), data=r_bmw, trace=F)
+summary(modelo_garch2)
+```
+
+
+
+
++Predicción
+
+Con un intervalo de confianza del 90%.
+
+```{r}
+predict(modelo_garch)
+predict(modelo_garch, n.ahead = 10, plot=TRUE, crit_val=2)
+predict(modelo_garch, n.ahead = 10, plot=TRUE, conf = .9, nx=100)
+
+```
+
+Predicción en el intervalo de 20 días
+
+## Modelo VAR
+
+```{r}
+r_vol <- dailyReturn(volks)
+d_r <- cbind(r_bmw, r_vol)
+#Eliminamos valores nulos
+d_r <- na.omit(d_r)
+
+#VAR
+m_var <- VAR(d_r)
+summary(m_var) 
+causality(m_var) 
+```
+
++ 
+```{r}
+model.r=irf(m_var) 
+model.r
+plot(model.r)
+
+#prediccion
+predict(m_var, n.ahead = 8, ci = 0.95) 
+```
+
+
+
