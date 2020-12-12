@@ -1,0 +1,82 @@
+---
+title: "CP07: Casual Impact"
+author: "Gonzalo Rodríguez "
+date: "`r Sys.Date()`"
+output:
+  prettydoc::html_pretty:
+    theme: architect
+    highlight: github
+---
+
+```{r setup, include=FALSE, message = FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+Objetivo:
+
+Explicar el efecto del "diesel gate" en las series de BMW Y VOW.
+
+```{r message=FALSE,warning=FALSE}
+
+library(readr)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(xts)
+library(CausalImpact)
+library(quantmod)
+```
+
+```{r }
+getSymbols('BMW.DE', from = '2014-01-01', to = Sys.Date())
+bmw <- BMW.DE[,6]
+
+getSymbols('VOW.DE', from = '2014-01-01', to = Sys.Date())
+volks <- VOW.DE[,6]
+
+```
+
+
+
+```{r}
+pre_period <- as.Date(c("2014-01-01", "2015-09-01"))
+post_period <- as.Date(c("2015-09-02", "2020-12-06"))
+Volskwagen_c <- cbind(volks, bmw)
+bmw_c<-cbind(bmw,volks)
+Volskwagen_c<-na.omit(Volskwagen_c)
+bmw_c<-na.omit(bmw_c)
+```
+
+
+```{r}
+causal <- CausalImpact(Volskwagen_c, pre.period = pre_period, post.period = post_period)
+```
+
+```{r}
+summary(causal)
+plot(causal)
+plot(causal, "original")
+```
+Como se observa después del escándalo que supuso el emissionsgate hubo una caida en el valor de Volkswagen.
+
+```{r}
+#report del causal
+
+summary(causal, "report")
+```
+
+```{r}
+causal1 <- CausalImpact(bmw_c, pre.period = pre_period, post.period = post_period)
+```
+```{r}
+summary(causal1)
+plot(causal1)
+plot(causal1, "original")
+```
+
+Como se observa claramente ocurro justo lo contrario en el caso de BMW.
+```{r}
+#report del causal
+
+summary(causal1, "report")
+```
+

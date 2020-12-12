@@ -1,0 +1,60 @@
+---
+title: "CP06-Cointegración"
+author: "Gonzalo Rodríguez Cañada"
+date: "`r Sys.Date()`"
+output:
+  prettydoc::html_pretty:
+    theme: architect
+    highlight: github
+---
+*Marco teórico:*
+
+No se pueden compara series temporales no estacionarias, la cointegración nos ayuda a a comparar series temporales cuando son cointegradas. Y han de cumplir los siguientes requisitos.
+
+1. Estas lo son cuando el error del modelo de regresión es estacionario.
+2. Las dos series han de tener el mismo número de diferencias para ser estacionarias.
+
+*Objetivo:*
+
+Ver si existe cointegración o no entre las series de BMW y Volskwagen.
+
+```{r message=FALSE,warning=FALSE}
+library(quantmod)
+library(forecast)
+library(fGarch)
+library(ggplot2)
+library(dplyr)
+library(vars)
+library("urca")
+library(tseries)
+```
+
++ Extraemos los datos
+
+```{r }
+getSymbols('BMW.DE', from = '2014-01-01', to = Sys.Date())
+bmw <- BMW.DE[,6]
+
+getSymbols('VOW.DE', from = '2014-01-01', to = Sys.Date())
+volkswagen <- VOW.DE[,6]
+```
+
+```{r}
+johansen_test= ca.jo(data.frame(bmw,volkswagen), type="trace", K=2, ecdet="none", spec="longrun")
+summary(johansen_test)
+```
+
+Formamos una combinación lineal,  usamos las componentes del VAP de mayor valor,  que corresponden a la primera columna de los pesos.
+
+```{r}
+x = 1.0000000*bmw + 0.1360693*volkswagen
+x = na.omit(x)
+plot(x, type="l")
+```
+
+Para comprobar si tenemos estacionariedad, hacemos el test Dickey-Fuller:
+
+```{r}
+adf.test(x)
+```
+Con que el p-valor es mayor a 0.05 no rechazamos hipótesis nula, que es no estacionariedad.

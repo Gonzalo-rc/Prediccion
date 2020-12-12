@@ -1,0 +1,19 @@
+---
+title: "CP03_Pisa"
+author: "Gonzalo Rodríguez Cañada"
+date: "`r Sys.Date()`"
+output:
+  prettydoc::html_pretty:
+    theme: architect
+    highlight: github
+---
+
+##Cargamos los datos 
+```{r include=FALSE}
+library(readr)
+pisa <-  read.csv("../data/pisasci2006.csv")
+
+
+
+```
+
