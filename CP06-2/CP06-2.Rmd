@@ -58,3 +58,4 @@ Para comprobar si tenemos estacionariedad, hacemos el test Dickey-Fuller:
 adf.test(x)
 ```
 Con que el p-valor es mayor a 0.05 no rechazamos hipótesis nula, que es no estacionariedad.
+Por tanto, asumimos que no están cointegradas.
